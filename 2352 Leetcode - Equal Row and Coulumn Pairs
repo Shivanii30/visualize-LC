@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Equal Pairs Dry Run Visualizer</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f7fa;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    .container {
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 60px);
+        gap: 5px;
+    }
+
+    .cell {
+        width: 60px;
+        height: 60px;
+        background: white;
+        border: 1px solid #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .highlight {
+        background: #cce5ff;
+    }
+
+    .map-box, .column-box {
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        min-width: 200px;
+        border: 1px solid #ccc;
+    }
+
+    .controls {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    button {
+        padding: 10px 15px;
+        margin: 5px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .info {
+        margin-top: 20px;
+        background: #fff;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .row-key {
+        font-family: monospace;
+    }
+</style>
+</head>
+<body>
+
+<h1>Equal Row–Column Pairs (Dry Run)</h1>
+
+<div class="container">
+    <div>
+        <h3>Grid</h3>
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="map-box">
+        <h3>Row Map</h3>
+        <div id="map"></div>
+    </div>
+
+    <div class="column-box">
+        <h3>Current Column</h3>
+        <div id="column"></div>
+        <p><b>Answer:</b> <span id="ans">0</span></p>
+    </div>
+</div>
+
+<div class="controls">
+    <button onclick="nextStep()">Next Step</button>
+    <button onclick="toggleAuto()">Auto Play</button>
+    <button onclick="pause()">Pause</button>
+</div>
+
+<div class="info" id="info"></div>
+
+<script>
+const gridData = [
+    [3, 2, 1],
+    [1, 7, 6],
+    [3, 2, 1]
+];
+
+const n = gridData.length;
+let step = 0;
+let auto = null;
+let ans = 0;
+let rowMap = {};
+let phase = "rows"; // rows or cols
+let rowIndex = 0;
+let colIndex = 0;
+
+const gridEl = document.getElementById("grid");
+const mapEl = document.getElementById("map");
+const colEl = document.getElementById("column");
+const infoEl = document.getElementById("info");
+const ansEl = document.getElementById("ans");
+
+function renderGrid(highlightCells = []) {
+    gridEl.innerHTML = "";
+    for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+            const div = document.createElement("div");
+            div.className = "cell";
+            if (highlightCells.some(h => h[0] === r && h[1] === c)) {
+                div.classList.add("highlight");
+            }
+            div.textContent = gridData[r][c];
+            gridEl.appendChild(div);
+        }
+    }
+}
+
+function updateMap() {
+    mapEl.innerHTML = "";
+    for (let key in rowMap) {
+        mapEl.innerHTML += `<div class="row-key">${key} → ${rowMap[key]}</div>`;
+    }
+}
+
+function nextStep() {
+    if (phase === "rows") {
+        if (rowIndex >= n) {
+            phase = "cols";
+            infoEl.innerHTML = "<b>Now comparing columns with stored rows.</b>";
+            return;
+        }
+
+        const row = gridData[rowIndex];
+        const key = JSON.stringify(row);
+
+        rowMap[key] = (rowMap[key] || 0) + 1;
+
+        renderGrid(row.map((_, c) => [rowIndex, c]));
+        updateMap();
+
+        infoEl.innerHTML = `Counting row <b>${row}</b> and storing it in the map.`;
+        rowIndex++;
+
+    } else {
+        if (colIndex >= n) {
+            infoEl.innerHTML = "<b>Dry run completed.</b>";
+            pause();
+            return;
+        }
+
+        let col = [];
+        let highlights = [];
+        for (let r = 0; r < n; r++) {
+            col.push(gridData[r][colIndex]);
+            highlights.push([r, colIndex]);
+        }
+
+        const key = JSON.stringify(col);
+        colEl.textContent = col.join(", ");
+
+        if (rowMap[key]) {
+            ans += rowMap[key];
+            infoEl.innerHTML = `Column <b>${col}</b> matches a row → add ${rowMap[key]} to answer.`;
+        } else {
+            infoEl.innerHTML = `Column <b>${col}</b> does not match any row.`;
+        }
+
+        ansEl.textContent = ans;
+        renderGrid(highlights);
+        colIndex++;
+    }
+}
+
+function toggleAuto() {
+    if (auto) return;
+    auto = setInterval(nextStep, 1000);
+}
+
+function pause() {
+    clearInterval(auto);
+    auto = null;
+}
+
+// Initial render
+renderGrid();
+infoEl.innerHTML = "Click <b>Next Step</b> to start dry run.";
+</script>
+
+</body>
+</html>
